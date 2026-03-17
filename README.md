@@ -73,3 +73,8 @@ C'est là que le code python se découpe en modules ayant chaque une tâche déf
     evaluate.py : Module d'évaluation du modèle.
     preprocess.py : Module de préparation des données
     print_draw.py : Module d'affichage des résultats
+
+
+👤 Auteur
+
+Projet réalisé dans le cadre de la formation FastIA — Module 0, Brief 1 - by Maroua Tounekti
