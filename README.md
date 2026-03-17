@@ -80,8 +80,14 @@ Ce script exécute 5 expériences et les enregistre automatiquement dans MLflow.
 # Tous les tests
 pytest tests/ -v
 
-# Sans TensorFlow (rapide, pour tester preprocess/evaluate/print_draw)
-pytest tests/ -v --ignore=tests/test_models.py --ignore=tests/test_integration.py
+# Tests unitaires uniquement (sans TensorFlow, rapide)
+pytest tests/test_evaluate.py tests/test_preprocess.py tests/test_print_draw.py -v
+
+# Tests fonctionnels uniquement (utilisent les vraies données)
+pytest tests/test_functional.py -v
+
+# Tests d'intégration (pipeline bout en bout)
+pytest tests/test_integration.py -v
 
 # Un fichier spécifique
 pytest tests/test_evaluate.py -v
@@ -89,10 +95,22 @@ pytest tests/test_preprocess.py -v
 pytest tests/test_models.py -v
 pytest tests/test_print_draw.py -v
 pytest tests/test_integration.py -v
+pytest tests/test_functional.py -v
 
 # Avec rapport de couverture
 pytest tests/ --cov=modules --cov=models --cov-report=term-missing
 ```
+
+### Types de tests
+
+| Fichier | Type | Description |
+|---------|------|-------------|
+| `test_evaluate.py` | Unitaire | Teste `evaluate_performance()` en isolation |
+| `test_preprocess.py` | Unitaire | Teste `preprocessing()` et `split()` en isolation |
+| `test_models.py` | Unitaire | Teste `create_nn_model()`, `train_model()`, `model_predict()` |
+| `test_print_draw.py` | Unitaire | Teste `save_loss_plot()` avec des mocks |
+| `test_integration.py` | Intégration | Pipeline complet avec données synthétiques |
+| `test_functional.py` | **Fonctionnel** | Scénarios métier avec les vraies données (drift, réentraînement, fichiers) |
 
 ---
 
