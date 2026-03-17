@@ -76,7 +76,8 @@ X_new_old_prep_train, X_new_old_prep_test, y_new_old_train, y_new_old_test = spl
 # Fonction utilitaire d'expérience
 # ---------------------------------------------------------------------------
 def run_experiment(exp_name, model, X_train, y_train, X_test, y_test,
-                   retrain=False, epochs=50, data_tag="old", save_model_path=None):
+                   retrain=False, epochs=50, data_tag="old", save_model_path=None,
+                   early_stopping=False, patience=10):
     """
     Exécute une expérience MLflow : entraînement optionnel puis évaluation.
 
@@ -86,9 +87,11 @@ def run_experiment(exp_name, model, X_train, y_train, X_test, y_test,
         X_train, y_train: Données d'entraînement.
         X_test, y_test: Données de test.
         retrain (bool): Si True, réentraîne le modèle avant l'évaluation.
-        epochs (int): Nombre d'époques si retrain=True.
+        epochs (int): Nombre maximum d'époques si retrain=True.
         data_tag (str): Tag MLflow indiquant le dataset utilisé ("old" ou "new").
         save_model_path (str, optional): Chemin pour sauvegarder le modèle réentraîné.
+        early_stopping (bool): Si True, arrête l'entraînement quand val_loss stagne.
+        patience (int): Nombre d'epochs sans amélioration avant arrêt (défaut: 10).
 
     Outputs:
         model: Modèle après entraînement éventuel.
@@ -99,18 +102,27 @@ def run_experiment(exp_name, model, X_train, y_train, X_test, y_test,
     with mlflow.start_run(run_name=exp_name):
         mlflow.set_tag("dataset", data_tag)
         mlflow.set_tag("retrain", str(retrain))
-        mlflow.log_param("epochs", epochs if retrain else 0)
+        mlflow.set_tag("early_stopping", str(early_stopping))
+        mlflow.log_param("epochs_max", epochs if retrain else 0)
         mlflow.log_param("retrain", retrain)
+        mlflow.log_param("early_stopping", early_stopping)
+        mlflow.log_param("patience", patience if early_stopping else "N/A")
         mlflow.log_param("train_samples", len(y_train))
         mlflow.log_param("test_samples", len(y_test))
 
         if retrain:
-            logger.info(f"Réentraînement du modèle ({epochs} epochs)...")
+            logger.info(f"Réentraînement du modèle ({epochs} epochs max, early_stopping={early_stopping})...")
             model, hist = train_model(
                 model, X_train, y_train,
                 X_val=X_test, y_val=y_test,
-                epochs=epochs
+                epochs=epochs,
+                early_stopping=early_stopping,
+                patience=patience
             )
+            # Log du nombre réel d'epochs effectuées
+            actual_epochs = len(hist.history["loss"])
+            mlflow.log_param("epochs_actual", actual_epochs)
+            logger.info(f"Arrêt après {actual_epochs} epochs.")
             fig_path = save_loss_plot(hist, exp_name)
             mlflow.log_artifact(fig_path)
             logger.success(f"Courbe de loss sauvegardée : {fig_path}")
@@ -221,6 +233,26 @@ run_experiment(
     epochs=100,
     data_tag="new",
     save_model_path=join(MODELS_DIR, "model_fresh_new_data.pkl")
+)
+
+# ---------------------------------------------------------------------------
+# EXP 6 — Early Stopping : nouveau modèle sur nouvelles données
+# Objectif : montrer que l'early stopping évite le surapprentissage en
+#            arrêtant automatiquement quand val_loss ne s'améliore plus.
+#            On donne 300 epochs max mais le modèle s'arrêtera bien avant.
+# ---------------------------------------------------------------------------
+logger.info("=== EXP 6 : Early Stopping — Nouveau modèle / Nouvelles données ===")
+model_es = create_nn_model(X_new_train.shape[1])
+run_experiment(
+    "Exp6_EarlyStopping_NewData",
+    model_es,
+    X_new_train, y_new_train, X_new_test, y_new_test,
+    retrain=True,
+    epochs=300,
+    data_tag="new",
+    early_stopping=True,
+    patience=10,
+    save_model_path=join(MODELS_DIR, "model_early_stopping.pkl")
 )
 
 logger.success("Toutes les expériences sont terminées. Lancez 'mlflow ui' pour visualiser les résultats.")

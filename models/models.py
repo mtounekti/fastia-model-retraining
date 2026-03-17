@@ -1,5 +1,6 @@
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.callbacks import EarlyStopping
 
 
 def create_nn_model(input_dim):
@@ -25,7 +26,8 @@ def create_nn_model(input_dim):
     return model
 
 
-def train_model(model, X, y, X_val=None, y_val=None, epochs=50, batch_size=32, verbose=0):
+def train_model(model, X, y, X_val=None, y_val=None, epochs=50, batch_size=32,
+                verbose=0, early_stopping=False, patience=10):
     """
     Entraîne un modèle Keras sur les données fournies.
 
@@ -35,19 +37,36 @@ def train_model(model, X, y, X_val=None, y_val=None, epochs=50, batch_size=32, v
         y (pd.Series): Labels cibles (montant_pret).
         X_val (np.ndarray, optional): Features de validation.
         y_val (pd.Series, optional): Labels de validation.
-        epochs (int): Nombre d'époques d'entraînement (défaut: 50).
+        epochs (int): Nombre maximum d'époques (défaut: 50).
         batch_size (int): Taille des mini-batches (défaut: 32).
         verbose (int): Niveau de verbosité Keras (0=silencieux, 1=barre de progression).
+        early_stopping (bool): Si True, arrête l'entraînement quand val_loss
+                               ne s'améliore plus depuis `patience` epochs.
+                               Nécessite X_val et y_val. (défaut: False)
+        patience (int): Nombre d'epochs sans amélioration avant arrêt (défaut: 10).
 
     Outputs:
-        model (Sequential): Modèle entraîné (modifié in-place).
+        model (Sequential): Modèle entraîné avec les meilleurs poids si early_stopping=True.
         hist (History): Historique Keras contenant les métriques par époque
                         (loss, val_loss). Utilisé pour tracer les courbes d'apprentissage.
     """
+    callbacks = []
+
+    if early_stopping and X_val is not None:
+        callbacks.append(
+            EarlyStopping(
+                monitor='val_loss',
+                patience=patience,
+                restore_best_weights=True,
+                verbose=1
+            )
+        )
+
     hist = model.fit(
         X, y,
         validation_data=(X_val, y_val) if X_val is not None and y_val is not None else None,
-        epochs=epochs, batch_size=batch_size, verbose=verbose
+        epochs=epochs, batch_size=batch_size, verbose=verbose,
+        callbacks=callbacks
     )
     return model, hist
 
