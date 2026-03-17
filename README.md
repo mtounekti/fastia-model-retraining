@@ -88,13 +88,13 @@ Dans l'interface MLflow, sélectionner l'expérience **OPCO-ATLAS-Loan-Predictio
 
 ## Description des expériences
 
-| # | Nom | Modèle | Données | Réentraînement | Objectif |
-|---|-----|--------|---------|----------------|----------|
-| 1 | Exp1_Baseline | Original | df_old | Non | Référence de performance initiale |
-| 2 | Exp2_DataDrift | Original | df_new | Non | Mesurer la dérive des données |
-| 3 | Exp3_Retrain_OldData | Original | df_old | Oui (50 epochs) | Illustrer le surapprentissage |
-| 4 | Exp4_Retrain_NewData | Original | df_new | Oui (50 epochs) | **Réentraînement principal** |
-| 5 | Exp5_FreshModel | Vierge | df_new | Oui (100 epochs) | Nouveau modèle depuis zéro |
+| # | Nom | Modèle | Données | Réentraînement | R² Test | MSE Test | MAE Test |
+|---|-----|--------|---------|----------------|---------|----------|----------|
+| 1 | Exp1_Baseline | Original | df_old | Non | **0.7655** | 34 420 598 | 4 789 |
+| 2 | Exp2_DataDrift | Original | df_new | Non | 0.6407 | 38 899 014 | 5 076 |
+| 3 | Exp3_Retrain_OldData | Original | df_old | Oui (50 epochs) | **0.8020** | 29 064 990 | 4 112 |
+| 4 | Exp4_Retrain_NewData | Original | df_new | Oui (50 epochs) | 0.5985 | 43 467 896 | 5 177 |
+| 5 | Exp5_FreshModel | Vierge | df_new | Oui (100 epochs) | 0.5815 | 45 302 075 | 5 281 |
 
 ---
 
@@ -149,7 +149,7 @@ Dense(1)  ← montant_pret prédit
 
 ---
 
-## captures écrans
+## Captures d'écran MLflow
 
 <img width="1863" height="905" alt="Capture d’écran 2026-03-17 à 13 30 56" src="https://github.com/user-attachments/assets/fb709e65-50ea-415a-80a4-299b2b870093" />
 
@@ -157,14 +157,24 @@ Dense(1)  ← montant_pret prédit
 
 ---
 
-## Conclusions attendues
+## Conclusions
 
-L'analyse MLflow doit permettre de répondre aux questions suivantes :
+### 1. La dérive de données est confirmée (Exp1 vs Exp2)
+Le modèle original passe de **R²=0.77** sur df_old à **R²=0.64** sur df_new sans réentraînement.
+La dégradation est significative (+4 300€ d'erreur moyenne) — la dérive est réelle et nécessite une action.
 
-1. **Exp 2 vs Exp 1** : le modèle se dégrade-t-il sur les nouvelles données ? → Dérive de données
-2. **Exp 3 vs Exp 1** : que se passe-t-il quand on réentraîne sur les mêmes données ? → Légère amélioration ou overfitting
-3. **Exp 4 vs Exp 2** : le réentraînement corrige-t-il la dérive ? → Objectif principal
-4. **Exp 5 vs Exp 4** : vaut-il mieux réentraîner l'ancien modèle ou repartir de zéro ?
+### 2. Réentraîner sur les mêmes données améliore légèrement (Exp3)
+**R²=0.80** — le modèle consolide ce qu'il sait déjà (fine-tuning).
+Répondre à la question du brief : *"si on réentraîne plusieurs fois avec les mêmes données, on fait du fine-tuning"*, avec un risque d'overfitting si on pousse trop d'epochs.
+
+### 3. Le réentraînement sur nouvelles données est décevant (Exp4)
+**R²=0.60** — moins bon que la baseline. Le modèle souffre de *catastrophic forgetting* : en apprenant les nouvelles données, il "oublie" les patterns des anciennes. 50 epochs ne suffisent pas pour reconverger.
+
+### 4. Un nouveau modèle vierge n'est pas meilleur (Exp5)
+**R²=0.58** — avec seulement 100 epochs, le modèle n'a pas eu le temps de converger sur les nouvelles données.
+
+### Recommandation
+Combiner df_old + df_new pour l'entraînement, ou augmenter significativement le nombre d'epochs (200-300) pour Exp4 et Exp5 afin de laisser le modèle converger sur les nouvelles données.
 
 ---
 
