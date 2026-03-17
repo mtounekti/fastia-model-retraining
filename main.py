@@ -34,7 +34,7 @@ model_2024_08 = joblib.load(join('models','model_2024_08.pkl'))
 y_pred = model_predict(model_2024_08, X_train)
 
 # mesurer les performances MSE, MAE et R²
-perf = evaluate_performance(y_train, y_pred)  
+perf = evaluate_performance(y_train, y_pred)
 
 print_data(perf)
 
@@ -42,7 +42,7 @@ print_data(perf)
 y_pred = model_predict(model_2024_08, X_test)
 
 # mesurer les performances MSE, MAE et R²
-perf = evaluate_performance(y_test, y_pred)   
+perf = evaluate_performance(y_test, y_pred)
 
 print_data(perf)
 

@@ -1,80 +1,186 @@
-# Bienvenue dans ce projet d'IA
+# OPCO ATLAS — Module 1, Brief 1 : Réentraînement d'un modèle IA
 
-Installation : 
+Projet de prédiction du montant de prêt bancaire avec réentraînement du modèle et suivi des performances via **MLflow**.
 
-    python -m venv .venv
+---
 
+## Contexte
 
-Activation :
+Un modèle de réseau de neurones a été mis en production en août 2024 (`model_2024_08.pkl`).
+Au fil du temps, les données du monde réel ont évolué : le modèle souffre de **dérive de données** (*data drift*).
+Ce projet vise à :
+1. Mesurer la dégradation du modèle sur les nouvelles données.
+2. Réentraîner le modèle avec les données récentes.
+3. Comparer les performances de toutes les stratégies via MLflow.
 
-Windows (PowerShell) :
+---
 
-    .\.venv\Scripts\Activate.ps1
+## Architecture du projet
 
-Windows (CMD) :
+```
+.
+├── data/
+│   ├── df_old.csv              # Données d'entraînement initial (2024)
+│   └── df_new.csv              # Nouvelles données (données récentes)
+├── models/
+│   ├── models.py               # Architecture du réseau de neurones
+│   ├── model_2024_08.pkl       # Modèle original entraîné en août 2024
+│   ├── model_retrained_new_data.pkl   # Modèle réentraîné (Exp 4) — généré par train.py
+│   ├── model_fresh_new_data.pkl       # Nouveau modèle vierge (Exp 5) — généré par train.py
+│   └── preprocessor.pkl        # Préprocesseur original fitté sur df_old
+├── modules/
+│   ├── evaluate.py             # Calcul des métriques de performance
+│   ├── preprocess.py           # Prétraitement des données
+│   └── print_draw.py           # Affichage et sauvegarde des graphiques
+├── plots/                      # Courbes de loss générées par train.py
+├── mlruns/                     # Données MLflow (générées automatiquement)
+├── main.py                     # Script original du prédécesseur (référence)
+├── train.py                    # Script principal : expériences + MLflow tracking
+├── requirements.txt
+└── README.md
+```
 
-    .\.venv\Scripts\activate.bat
+---
 
-macOS / Linux :
+## Installation
 
-    source .venv/bin/activate
+### 1. Créer l'environnement virtuel
 
+```bash
+python -m venv .venv
+```
 
-Installation des dépendances : 
+### 2. Activer l'environnement
 
-    pip install -r requirements.txt
+- **macOS / Linux** : `source .venv/bin/activate`
+- **Windows (PowerShell)** : `.\.venv\Scripts\Activate.ps1`
+- **Windows (CMD)** : `.\.venv\Scripts\activate.bat`
 
+### 3. Installer les dépendances
 
-# Le modèle d'IA
+```bash
+pip install -r requirements.txt
+```
 
-Nous avons ici un réseau de neurones (NN) avec :
-2 couches "denses"
-1 couche de prédiction
+---
 
-# Architecture du projet
+## Lancer les expériences
 
-    .
-    ├── data/
-    │   ├── df_new.csv
-    │   └── df_old.csv
-    ├── models/
-    │   ├── models.py
-    │   ├── model_2024_08.pkl
-    │   └── preprocessor.pkl
-    ├── modules/
-    │   ├── evaluate.py
-    │   ├── preprocess.py
-    │   └── print_draw.py
-    ├── .gitignore
-    ├── README.md
-    ├── main.py
-    └── requirements.txt
+```bash
+python train.py
+```
 
+Ce script exécute 5 expériences et les enregistre automatiquement dans MLflow.
 
-data/ 
+---
 
-C'est là que sont stockées les données.
+## Visualiser les résultats avec MLflow
 
-    df_new.csv : Les données fraîches du jour, prêtes à être dévorées par notre IA.
-    df_old.csv : Les anciennes données ayant servis à l'apprentissage initial du modèle
+```bash
+mlflow ui
+```
 
-models/ 
+Ouvrir dans le navigateur : [http://localhost:5000](http://localhost:5000)
 
-C'est là que sont stockés les modèles
+Dans l'interface MLflow, sélectionner l'expérience **OPCO-ATLAS-Loan-Prediction** pour comparer tous les runs.
 
-    models.py : C'est ici que l'on définit l'architecture de notre NN.
-    model_2024_08.pkl : Une version sauvegardée de notre modèle. 
-    preprocessor.pkl : le preparateur de données
+---
 
-modules/ 
+## Description des expériences
 
-C'est là que le code python se découpe en modules ayant chaque une tâche définie
+| # | Nom | Modèle | Données | Réentraînement | Objectif |
+|---|-----|--------|---------|----------------|----------|
+| 1 | Exp1_Baseline | Original | df_old | Non | Référence de performance initiale |
+| 2 | Exp2_DataDrift | Original | df_new | Non | Mesurer la dérive des données |
+| 3 | Exp3_Retrain_OldData | Original | df_old | Oui (50 epochs) | Illustrer le surapprentissage |
+| 4 | Exp4_Retrain_NewData | Original | df_new | Oui (50 epochs) | **Réentraînement principal** |
+| 5 | Exp5_FreshModel | Vierge | df_new | Oui (100 epochs) | Nouveau modèle depuis zéro |
 
-    evaluate.py : Module d'évaluation du modèle.
-    preprocess.py : Module de préparation des données
-    print_draw.py : Module d'affichage des résultats
+---
 
+## Métriques suivies
 
-👤 Auteur
+### MSE — Mean Squared Error
+Moyenne des **erreurs au carré** entre les valeurs prédites et réelles.
+Très sensible aux valeurs aberrantes (outliers). **Plus bas = meilleur.**
 
-Projet réalisé dans le cadre de la formation FastIA — Module 0, Brief 1 - by Maroua Tounekti
+### MAE — Mean Absolute Error
+Moyenne des **erreurs absolues**. Même unité que la cible (euros).
+Plus interprétable que le MSE. **Plus bas = meilleur.**
+
+### R² — Coefficient de Détermination
+Mesure la **proportion de variance expliquée** par le modèle.
+- R² = 1 : prédiction parfaite
+- R² = 0 : le modèle est aussi performant que prédire la moyenne
+- R² < 0 : le modèle est moins bon que la moyenne
+
+**Plus proche de 1 = meilleur.**
+
+---
+
+## Courbes de loss
+
+Deux courbes sont tracées lors de chaque entraînement :
+
+- **Loss (entraînement)** : erreur sur les données d'entraînement — doit diminuer.
+- **Val Loss (validation)** : erreur sur les données de test — doit suivre la loss.
+
+Si la val_loss remonte alors que la loss continue de baisser : **overfitting** (surapprentissage).
+Les courbes sont sauvegardées dans `plots/` et loggées comme artefacts MLflow.
+
+---
+
+## Architecture du modèle
+
+Réseau de neurones feedforward (fully connected) pour la régression :
+
+```
+Input (n features)
+    ↓
+Dense(64, ReLU)
+    ↓
+Dense(32, ReLU)
+    ↓
+Dense(1)  ← montant_pret prédit
+```
+
+- **Optimizer** : Adam
+- **Loss** : Mean Squared Error (MSE)
+
+---
+
+## Données
+
+Les données représentent des clients avec leurs caractéristiques socio-démographiques :
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| age | Numérique | Âge du client |
+| taille | Numérique | Taille (cm) |
+| poids | Numérique | Poids (kg) |
+| revenu_estime_mois | Numérique | Revenu mensuel estimé (€) |
+| sexe | Catégorielle | Genre |
+| sport_licence | Catégorielle | Pratique sportive avec licence |
+| niveau_etude | Catégorielle | Niveau d'éducation |
+| region | Catégorielle | Région de résidence |
+| smoker | Catégorielle | Statut fumeur |
+| nationalité_francaise | Catégorielle | Nationalité française |
+| **montant_pret** | **Cible** | **Montant du prêt à prédire (€)** |
+
+---
+
+## Conclusions attendues
+
+L'analyse MLflow doit permettre de répondre aux questions suivantes :
+
+1. **Exp 2 vs Exp 1** : le modèle se dégrade-t-il sur les nouvelles données ? → Dérive de données
+2. **Exp 3 vs Exp 1** : que se passe-t-il quand on réentraîne sur les mêmes données ? → Légère amélioration ou overfitting
+3. **Exp 4 vs Exp 2** : le réentraînement corrige-t-il la dérive ? → Objectif principal
+4. **Exp 5 vs Exp 4** : vaut-il mieux réentraîner l'ancien modèle ou repartir de zéro ?
+
+---
+
+## Auteur
+
+Projet réalisé dans le cadre de la formation **FastIA — Module 1, Brief 1**
+Maroua Tounekti
