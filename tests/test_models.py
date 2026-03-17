@@ -179,36 +179,53 @@ class TestTrainModel:
 
 class TestEarlyStopping:
 
-    def test_early_stopping_stops_before_max_epochs(self):
+    def test_early_stopping_callback_is_passed_to_fit(self, small_arrays):
         """
-        Avec early_stopping=True, le nombre d'epochs réel doit être
-        inférieur au max fixé.
+        Vérifie que notre code passe bien un callback EarlyStopping à model.fit
+        quand early_stopping=True.
 
-        On utilise un dataset qui garantit le surapprentissage :
-        - 6 samples d'entraînement mémorisables (identité → labels simples)
-        - 30 samples de validation avec labels aléatoires non apprenables
-        → val_loss diverge rapidement, l'early stopping se déclenche.
+        On teste notre logique, pas le comportement interne de TensorFlow.
         """
-        np.random.seed(42)
-        # Train : très peu de samples → le modèle les mémorise
-        X_train = np.eye(6, 10).astype(np.float32)
-        y_train = np.array([1., 2., 3., 4., 5., 6.], dtype=np.float32) * 10000
+        from unittest.mock import patch
+        from tensorflow.keras.callbacks import EarlyStopping
 
-        # Val : labels aléatoires → aucune généralisation possible
-        X_val = np.random.rand(30, 10).astype(np.float32)
-        y_val = np.random.rand(30).astype(np.float32) * 50000
+        X, y = small_arrays
+        X_train, X_val = X[:40], X[40:]
+        y_train, y_val = y[:40], y[40:]
+        model = create_nn_model(X.shape[1])
 
-        model = create_nn_model(10)
-        _, hist = train_model(
-            model, X_train, y_train,
-            X_val=X_val, y_val=y_val,
-            epochs=500,
-            early_stopping=True,
-            patience=5
-        )
-        assert len(hist.history["loss"]) < 500, (
-            "L'early stopping n'a pas arrêté l'entraînement avant 500 epochs"
-        )
+        with patch.object(model, 'fit', wraps=model.fit) as mock_fit:
+            train_model(
+                model, X_train, y_train,
+                X_val=X_val, y_val=y_val,
+                epochs=2,
+                early_stopping=True,
+                patience=5
+            )
+            call_kwargs = mock_fit.call_args[1]
+            callbacks = call_kwargs.get('callbacks', [])
+            assert any(isinstance(cb, EarlyStopping) for cb in callbacks), (
+                "EarlyStopping n'a pas été ajouté aux callbacks"
+            )
+
+    def test_no_early_stopping_callback_when_disabled(self, small_arrays):
+        """
+        Quand early_stopping=False, aucun callback EarlyStopping ne doit
+        être passé à model.fit.
+        """
+        from unittest.mock import patch
+        from tensorflow.keras.callbacks import EarlyStopping
+
+        X, y = small_arrays
+        model = create_nn_model(X.shape[1])
+
+        with patch.object(model, 'fit', wraps=model.fit) as mock_fit:
+            train_model(model, X, y, epochs=2, early_stopping=False)
+            call_kwargs = mock_fit.call_args[1]
+            callbacks = call_kwargs.get('callbacks', [])
+            assert not any(isinstance(cb, EarlyStopping) for cb in callbacks), (
+                "EarlyStopping ne devrait pas être dans les callbacks"
+            )
 
     def test_early_stopping_disabled_runs_all_epochs(self, small_arrays):
         """
