@@ -193,7 +193,9 @@ Dense(1)  ← montant_pret prédit
 
 <img width="1863" height="905" alt="Capture d’écran 2026-03-17 à 13 30 56" src="https://github.com/user-attachments/assets/fb709e65-50ea-415a-80a4-299b2b870093" />
 
+<img width="1863" height="905" alt="image" src="https://github.com/user-attachments/assets/164396dc-5651-42e5-937c-029d8afce732" />
 
+<img width="1863" height="905" alt="image" src="https://github.com/user-attachments/assets/76c0508a-3205-4ef2-add6-5424ee29ec8f" />
 
 ---
 
