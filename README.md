@@ -74,6 +74,28 @@ Ce script exécute 5 expériences et les enregistre automatiquement dans MLflow.
 
 ---
 
+## Lancer les tests
+
+```bash
+# Tous les tests
+pytest tests/ -v
+
+# Sans TensorFlow (rapide, pour tester preprocess/evaluate/print_draw)
+pytest tests/ -v --ignore=tests/test_models.py --ignore=tests/test_integration.py
+
+# Un fichier spécifique
+pytest tests/test_evaluate.py -v
+pytest tests/test_preprocess.py -v
+pytest tests/test_models.py -v
+pytest tests/test_print_draw.py -v
+pytest tests/test_integration.py -v
+
+# Avec rapport de couverture
+pytest tests/ --cov=modules --cov=models --cov-report=term-missing
+```
+
+---
+
 ## Visualiser les résultats avec MLflow
 
 ```bash
