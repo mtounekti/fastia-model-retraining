@@ -218,6 +218,46 @@ class TestReproducibility:
         np.testing.assert_array_equal(X_train_1, X_train_2)
         np.testing.assert_array_equal(X_test_1, X_test_2)
 
+
+# ---------------------------------------------------------------------------
+# Scénario 6 : Early stopping évite le surapprentissage
+# ---------------------------------------------------------------------------
+
+class TestEarlyStopping:
+
+    def test_early_stopping_stops_before_max_epochs_on_real_data(self, real_new_data):
+        """
+        Sur les vraies données (df_new), l'early stopping doit arrêter
+        l'entraînement bien avant 300 epochs.
+        """
+        X_train, X_test, y_train, y_test, _ = real_new_data
+        model = create_nn_model(X_train.shape[1])
+        _, hist = train_model(
+            model, X_train, y_train,
+            X_val=X_test, y_val=y_test,
+            epochs=300,
+            early_stopping=True,
+            patience=10
+        )
+        assert len(hist.history["loss"]) < 300, (
+            "L'early stopping n'a pas arrêté l'entraînement sur df_new"
+        )
+
+    def test_early_stopping_model_file_exists(self):
+        """model_early_stopping.pkl doit exister après exécution de train.py (Exp6)."""
+        assert os.path.isfile(join(MODELS_DIR, "model_early_stopping.pkl")), \
+            "model_early_stopping.pkl introuvable — avez-vous lancé train.py ?"
+
+    def test_early_stopping_model_achieves_acceptable_r2(self, real_new_data):
+        """
+        Le modèle sauvegardé par Exp6 (early stopping) doit atteindre R² > 0.50
+        sur les nouvelles données.
+        """
+        _, X_test, _, y_test, _ = real_new_data
+        model = joblib.load(join(MODELS_DIR, "model_early_stopping.pkl"))
+        r2 = evaluate_performance(y_test, model_predict(model, X_test))["R²"]
+        assert r2 > 0.50, f"Modèle early stopping insuffisant : R²={r2:.4f}"
+
     def test_preprocessing_is_deterministic(self):
         """
         Appliquer preprocessing() deux fois sur le même DataFrame doit

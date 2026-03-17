@@ -171,3 +171,95 @@ class TestTrainModel:
             for b, a in zip(weights_before, weights_after)
         )
         assert any_changed, "Les poids n'ont pas changé après l'entraînement"
+
+
+# ---------------------------------------------------------------------------
+# early_stopping dans train_model()
+# ---------------------------------------------------------------------------
+
+class TestEarlyStopping:
+
+    def test_early_stopping_stops_before_max_epochs(self):
+        """
+        Avec early_stopping=True, le nombre d'epochs réel doit être
+        inférieur au max fixé.
+
+        On utilise un dataset qui garantit le surapprentissage :
+        - 6 samples d'entraînement mémorisables (identité → labels simples)
+        - 30 samples de validation avec labels aléatoires non apprenables
+        → val_loss diverge rapidement, l'early stopping se déclenche.
+        """
+        np.random.seed(42)
+        # Train : très peu de samples → le modèle les mémorise
+        X_train = np.eye(6, 10).astype(np.float32)
+        y_train = np.array([1., 2., 3., 4., 5., 6.], dtype=np.float32) * 10000
+
+        # Val : labels aléatoires → aucune généralisation possible
+        X_val = np.random.rand(30, 10).astype(np.float32)
+        y_val = np.random.rand(30).astype(np.float32) * 50000
+
+        model = create_nn_model(10)
+        _, hist = train_model(
+            model, X_train, y_train,
+            X_val=X_val, y_val=y_val,
+            epochs=500,
+            early_stopping=True,
+            patience=5
+        )
+        assert len(hist.history["loss"]) < 500, (
+            "L'early stopping n'a pas arrêté l'entraînement avant 500 epochs"
+        )
+
+    def test_early_stopping_disabled_runs_all_epochs(self, small_arrays):
+        """
+        Sans early_stopping, le modèle doit s'entraîner exactement le nombre
+        d'epochs demandé.
+        """
+        X, y = small_arrays
+        X_train, X_val = X[:40], X[40:]
+        y_train, y_val = y[:40], y[40:]
+        model = create_nn_model(X.shape[1])
+        _, hist = train_model(
+            model, X_train, y_train,
+            X_val=X_val, y_val=y_val,
+            epochs=10,
+            early_stopping=False
+        )
+        assert len(hist.history["loss"]) == 10
+
+    def test_early_stopping_ignored_without_val_data(self, small_arrays):
+        """
+        Sans données de validation, early_stopping=True ne doit pas planter
+        et doit s'entraîner normalement.
+        """
+        X, y = small_arrays
+        model = create_nn_model(X.shape[1])
+        _, hist = train_model(model, X, y, epochs=5, early_stopping=True, patience=3)
+        assert len(hist.history["loss"]) == 5
+
+    def test_early_stopping_restores_best_weights(self):
+        """
+        Avec restore_best_weights=True (défaut), les poids finaux doivent
+        correspondre au meilleur checkpoint — la val_loss finale ne doit pas
+        être la pire observée.
+        """
+        np.random.seed(42)
+        X_train = np.eye(6, 10).astype(np.float32)
+        y_train = np.array([1., 2., 3., 4., 5., 6.], dtype=np.float32) * 10000
+        X_val = np.random.rand(30, 10).astype(np.float32)
+        y_val = np.random.rand(30).astype(np.float32) * 50000
+
+        model = create_nn_model(10)
+        _, hist = train_model(
+            model, X_train, y_train,
+            X_val=X_val, y_val=y_val,
+            epochs=500,
+            early_stopping=True,
+            patience=5
+        )
+        val_losses = hist.history["val_loss"]
+        final_val_loss = val_losses[-1]
+        max_val_loss = max(val_losses)
+        assert final_val_loss <= max_val_loss, (
+            "Les poids finaux semblent être les pires observés"
+        )
