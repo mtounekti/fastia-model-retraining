@@ -149,23 +149,11 @@ Dense(1)  ← montant_pret prédit
 
 ---
 
-## Données
+## captures écrans
 
-Les données représentent des clients avec leurs caractéristiques socio-démographiques :
+<img width="1863" height="905" alt="Capture d’écran 2026-03-17 à 13 30 56" src="https://github.com/user-attachments/assets/fb709e65-50ea-415a-80a4-299b2b870093" />
 
-| Colonne | Type | Description |
-|---------|------|-------------|
-| age | Numérique | Âge du client |
-| taille | Numérique | Taille (cm) |
-| poids | Numérique | Poids (kg) |
-| revenu_estime_mois | Numérique | Revenu mensuel estimé (€) |
-| sexe | Catégorielle | Genre |
-| sport_licence | Catégorielle | Pratique sportive avec licence |
-| niveau_etude | Catégorielle | Niveau d'éducation |
-| region | Catégorielle | Région de résidence |
-| smoker | Catégorielle | Statut fumeur |
-| nationalité_francaise | Catégorielle | Nationalité française |
-| **montant_pret** | **Cible** | **Montant du prêt à prédire (€)** |
+
 
 ---
 
