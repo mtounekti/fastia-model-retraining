@@ -11,3 +11,8 @@ pytest
 Faker
 h5py
 scipy
+fastapi
+uvicorn[standard]
+python-multipart
+httpx
+streamlit
