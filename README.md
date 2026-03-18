@@ -1,6 +1,6 @@
-# OPCO ATLAS — Module 1, Brief 1 : Réentraînement d'un modèle IA
+# OPCO ATLAS — Module 1 : Réentraînement, API, Journalisation et Conteneurisation
 
-Projet de prédiction du montant de prêt bancaire avec réentraînement du modèle et suivi des performances via **MLflow**.
+Projet de prédiction du montant de prêt bancaire avec réentraînement du modèle, exposition via **FastAPI**, interface **Streamlit**, journalisation **Loguru** et conteneurisation **Docker**.
 
 ---
 
@@ -20,24 +20,99 @@ Ce projet vise à :
 ```
 .
 ├── data/
-│   ├── df_old.csv              # Données d'entraînement initial (2024)
-│   └── df_new.csv              # Nouvelles données (données récentes)
+│   ├── df_old.csv                     # Données d'entraînement initial (2024)
+│   └── df_new.csv                     # Nouvelles données (données récentes)
 ├── models/
-│   ├── models.py               # Architecture du réseau de neurones
-│   ├── model_2024_08.pkl       # Modèle original entraîné en août 2024
-│   ├── model_retrained_new_data.pkl   # Modèle réentraîné (Exp 4) — généré par train.py
-│   ├── model_fresh_new_data.pkl       # Nouveau modèle vierge (Exp 5) — généré par train.py
-│   └── preprocessor.pkl        # Préprocesseur original fitté sur df_old
+│   ├── models.py                      # Architecture du réseau de neurones
+│   ├── model_2024_08.pkl              # Modèle original entraîné en août 2024
+│   ├── model_retrained_new_data.pkl   # Modèle réentraîné (Exp 4)
+│   ├── model_fresh_new_data.pkl       # Nouveau modèle vierge (Exp 5)
+│   ├── model_early_stopping.pkl       # Modèle avec early stopping (Exp 6) ← utilisé par l'API
+│   └── preprocessor.pkl               # Préprocesseur fitté
 ├── modules/
-│   ├── evaluate.py             # Calcul des métriques de performance
-│   ├── preprocess.py           # Prétraitement des données
-│   └── print_draw.py           # Affichage et sauvegarde des graphiques
-├── plots/                      # Courbes de loss générées par train.py
-├── mlruns/                     # Données MLflow (générées automatiquement)
-├── main.py                     # Script original du prédécesseur (référence)
-├── train.py                    # Script principal : expériences + MLflow tracking
+│   ├── evaluate.py                    # Calcul des métriques de performance
+│   ├── preprocess.py                  # Prétraitement des données
+│   └── print_draw.py                  # Affichage et sauvegarde des graphiques
+├── tests/
+│   ├── test_evaluate.py               # Tests unitaires — métriques
+│   ├── test_preprocess.py             # Tests unitaires — prétraitement
+│   ├── test_models.py                 # Tests unitaires — modèle
+│   ├── test_print_draw.py             # Tests unitaires — visualisation
+│   ├── test_integration.py            # Tests d'intégration — pipeline complet
+│   ├── test_functional.py             # Tests fonctionnels — scénarios métier
+│   └── test_api.py                    # Tests fonctionnels — routes API
+├── logs/
+│   └── api.log                        # Fichier de logs (généré au démarrage)
+├── plots/                             # Courbes de loss générées par train.py
+├── mlruns/                            # Données MLflow (générées automatiquement)
+├── app.py                             # API FastAPI (routes /health, /predict, /retrain)
+├── streamlit_app.py                   # Interface utilisateur Streamlit
+├── main.py                            # Script original du prédécesseur (référence)
+├── train.py                           # Script principal : expériences + MLflow tracking
+├── Dockerfile                         # Conteneurisation de l'API
+├── docker-compose.yml                 # Orchestration multi-services
 ├── requirements.txt
 └── README.md
+```
+
+---
+
+## API FastAPI
+
+### Routes disponibles
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/health` | Vérifie l'état du service et confirme que le modèle est chargé |
+| `POST` | `/predict` | Prédit le montant du prêt à partir des caractéristiques client |
+| `POST` | `/retrain` | Réentraîne le modèle avec un nouveau fichier CSV |
+
+### Schéma d'entrée `/predict`
+
+```json
+{
+  "age": 35,
+  "taille": 175,
+  "poids": 75,
+  "revenu_estime_mois": 2500,
+  "sexe": "M",
+  "sport_licence": "oui",
+  "niveau_etude": "bac+3",
+  "region": "IDF",
+  "smoker": "no",
+  "nationalité_francaise": "oui"
+}
+```
+
+### Schéma de sortie `/predict`
+
+```json
+{
+  "prediction": 12543.67,
+  "model_version": "model_early_stopping"
+}
+```
+
+### Documentation interactive
+
+Une fois l'API lancée, la documentation Swagger est disponible sur :
+[http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+## Journalisation (Loguru)
+
+Tous les appels aux endpoints sont journalisés automatiquement :
+- **Console** : niveau `INFO`
+- **Fichier** : `logs/api.log` — niveau `DEBUG`, rotation à 10 MB, rétention 30 jours
+
+Chaque log contient : horodatage, niveau, message (entrée, sortie, erreurs éventuelles).
+
+Exemple :
+```
+2026-03-18 09:46:51 | INFO     | Model loaded from models/model_early_stopping.pkl
+2026-03-18 09:46:52 | INFO     | POST /predict — input: {...}
+2026-03-18 09:46:52 | INFO     | POST /predict — prediction=12543.67
 ```
 
 ---
@@ -64,13 +139,54 @@ pip install -r requirements.txt
 
 ---
 
-## Lancer les expériences
+## Lancer l'API en local
+
+```bash
+uvicorn app:app --reload
+```
+
+L'API est disponible sur [http://localhost:8000](http://localhost:8000)
+Documentation Swagger : [http://localhost:8000/docs](http://localhost:8000/docs)
+
+## Lancer l'interface Streamlit
+
+```bash
+streamlit run streamlit_app.py
+```
+
+Interface disponible sur [http://localhost:8501](http://localhost:8501)
+
+> Démarrer l'API **avant** Streamlit.
+
+---
+
+## Lancer avec Docker
+
+### Build et run de l'API seule
+
+```bash
+docker build -t fastia-api .
+docker run -p 8000:8000 fastia-api
+```
+
+### Avec Docker Compose (API + Streamlit)
+
+```bash
+docker-compose up
+```
+
+- API : [http://localhost:8000](http://localhost:8000)
+- Streamlit : [http://localhost:8501](http://localhost:8501)
+
+---
+
+## Lancer les expériences de réentraînement
 
 ```bash
 python train.py
 ```
 
-Ce script exécute 5 expériences et les enregistre automatiquement dans MLflow.
+Ce script exécute 6 expériences et les enregistre automatiquement dans MLflow.
 
 ---
 
@@ -80,22 +196,17 @@ Ce script exécute 5 expériences et les enregistre automatiquement dans MLflow.
 # Tous les tests
 pytest tests/ -v
 
+# Tests API uniquement
+pytest tests/test_api.py -v
+
 # Tests unitaires uniquement (sans TensorFlow, rapide)
 pytest tests/test_evaluate.py tests/test_preprocess.py tests/test_print_draw.py -v
 
-# Tests fonctionnels uniquement (utilisent les vraies données)
+# Tests fonctionnels — scénarios métier sur vraies données
 pytest tests/test_functional.py -v
 
 # Tests d'intégration (pipeline bout en bout)
 pytest tests/test_integration.py -v
-
-# Un fichier spécifique
-pytest tests/test_evaluate.py -v
-pytest tests/test_preprocess.py -v
-pytest tests/test_models.py -v
-pytest tests/test_print_draw.py -v
-pytest tests/test_integration.py -v
-pytest tests/test_functional.py -v
 
 # Avec rapport de couverture
 pytest tests/ --cov=modules --cov=models --cov-report=term-missing
@@ -110,7 +221,8 @@ pytest tests/ --cov=modules --cov=models --cov-report=term-missing
 | `test_models.py` | Unitaire | Teste `create_nn_model()`, `train_model()`, `model_predict()` |
 | `test_print_draw.py` | Unitaire | Teste `save_loss_plot()` avec des mocks |
 | `test_integration.py` | Intégration | Pipeline complet avec données synthétiques |
-| `test_functional.py` | **Fonctionnel** | Scénarios métier avec les vraies données (drift, réentraînement, fichiers) |
+| `test_functional.py` | Fonctionnel | Scénarios métier avec les vraies données (drift, réentraînement) |
+| `test_api.py` | **Fonctionnel API** | Routes `/health`, `/predict`, `/retrain` (18 tests) |
 
 ---
 
@@ -222,5 +334,5 @@ Combiner df_old + df_new pour l'entraînement, ou augmenter significativement le
 
 ## Auteur
 
-Projet réalisé dans le cadre de la formation **FastIA — Module 1, Brief 1**
+Projet réalisé dans le cadre de la formation **FastIA — Module 1, Briefs 1 & 2**
 Maroua Tounekti
