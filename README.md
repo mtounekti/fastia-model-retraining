@@ -313,6 +313,20 @@ Dense(1)  ← montant_pret prédit
 
 ---
 
+## Captures d'écran StreamLit
+
+<img width="1043" height="929" alt="image" src="https://github.com/user-attachments/assets/bc588ee5-3a17-43e5-8275-a6a430a4acaf" />
+
+<img width="1043" height="929" alt="image" src="https://github.com/user-attachments/assets/83f43540-7acb-4472-ae95-326f9f025d44" />
+
+---
+
+## Captures d'écran API docs
+
+<img width="1486" height="929" alt="image" src="https://github.com/user-attachments/assets/508eb4f0-bca3-4ed1-9e6f-2115195ecee0" />
+
+---
+
 ## Conclusions
 
 ### 1. La dérive de données est confirmée (Exp1 vs Exp2)
