@@ -224,6 +224,8 @@ pytest tests/ --cov=modules --cov=models --cov-report=term-missing
 | `test_functional.py` | Fonctionnel | Scénarios métier avec les vraies données (drift, réentraînement) |
 | `test_api.py` | **Fonctionnel API** | Routes `/health`, `/predict`, `/retrain` (18 tests) |
 
+<img width="1459" height="401" alt="image" src="https://github.com/user-attachments/assets/d29816c6-f5af-449e-b89a-a61ff600e521" />
+
 ---
 
 ## Visualiser les résultats avec MLflow
