@@ -4,6 +4,20 @@ Projet de prédiction du montant de prêt bancaire avec réentraînement du mod�
 
 ---
 
+## Branches
+
+| Branche | Contenu |
+|---------|---------|
+| `main` | **Brief 1** — Réentraînement du modèle, détection de data drift, MLflow |
+| `m1b2-api-logs-docker` | **Brief 1 + Brief 2** — API FastAPI, Streamlit, Loguru, tests API, Docker |
+
+> Pour tester les fonctionnalités du **Brief 2** (API, Streamlit, Docker), basculer sur la branche `m1b2-api-logs-docker` :
+> ```bash
+> git checkout m1b2-api-logs-docker
+> ```
+
+---
+
 ## Contexte
 
 Un modèle de réseau de neurones a été mis en production en août 2024 (`model_2024_08.pkl`).
@@ -12,6 +26,8 @@ Ce projet vise à :
 1. Mesurer la dégradation du modèle sur les nouvelles données.
 2. Réentraîner le modèle avec les données récentes.
 3. Comparer les performances de toutes les stratégies via MLflow.
+4. Exposer le modèle via une API FastAPI avec journalisation et tests.
+5. Conteneuriser le service pour un déploiement reproductible.
 
 ---
 
